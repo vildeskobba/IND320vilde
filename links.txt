@@ -1,0 +1,3 @@
+# Links 
+github repo: https://github.com/vildeskobba/IND320vilde 
+Streamlit app: https://ind320vilde.streamlit.app/ 

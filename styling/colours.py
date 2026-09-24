@@ -1,0 +1,7 @@
+COLOURS = {
+    'LIGHT_PINK': "#FACCD9", 
+    'PINK': "#FE80A2", 
+    'DARK_PINK': "#B12051", 
+    'ALMOST_WHITE_PINK': '#FFF7FB', 
+    'ALMOST_BLACK_PINK': '#480B2D'
+    }
