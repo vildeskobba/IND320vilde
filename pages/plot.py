@@ -10,7 +10,7 @@ Buttons.home_button()
 st.title("Reservoir data")
 
 
-# Load data
+# Load data function, via API
 from NVE_API import get_nve_data
 
 # Columns that can be plotted
@@ -25,7 +25,7 @@ y_axis_cols = [
 # Select what to plot
 selected = st.selectbox("Select data to plot", ["All"] + y_axis_cols)
 
-# Fetch data to determine available months
+# Fetch data
 df = get_nve_data()
 df["date"] = pd.to_datetime(df["date"])
 
@@ -35,7 +35,7 @@ month_labels = [str(m) for m in months]
 selected_months = st.select_slider(
     "Select download interval",
     options=month_labels,
-    value=(month_labels[0], month_labels[-1]),
+    value=(month_labels[-12], month_labels[-1]),
 )
 
 slider_start = pd.Period(selected_months[0]).start_time

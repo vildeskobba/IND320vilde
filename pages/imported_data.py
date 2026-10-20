@@ -9,6 +9,7 @@ st.title("Imported data")
 
 from NVE_API import get_nve_data
 
+# this function uses the api to fetch data
 df = get_nve_data()
 
 

@@ -9,11 +9,7 @@ import matplotlib.pyplot as plt
 from pymongo import MongoClient
 import certifi
 
-st.title("Connection analysis")
-
-# Load your dataset
-# Replace this with the data-loading code from your notebook
-# df = pd.read_csv("your_data.csv")
+st.title("Power flows")
 
 
 # Connect to MongoDB
@@ -23,22 +19,19 @@ def get_client():
 
 
 client = get_client()
-
 db = client["power_data"]
-""""""
 
-""""""
-
-
+# columns with specified width
 left, right = st.columns([2, 3])
 
-
+# left side: pie chart
 with left:
     annual_collection = db["annual_flows"]
     annual_df = pd.DataFrame(list(annual_collection.find({}, {"_id": 0})))
 
     st.subheader("Flow distribution 2025")
 
+    # function to show pie chart for specified border
     def show_pie_for_selected_border(zone_a, zone_b):
         pie_df = (
             annual_df[
@@ -81,6 +74,7 @@ with left:
         else:
             st.warning(f"No flow data found for {zone_a} and {zone_b}.")
 
+    # radio buttons to select border
     border_data = {
         ("NO_1", "SE_3"): None,
         ("NO_2", "DK_1"): None,
@@ -90,7 +84,6 @@ with left:
         ("NO_3", "SE_2"): None,
         ("NO_4", "SE_2"): None,
     }
-
     selected_border = st.radio(
         "Select border",
         options=list(border_data.keys()),
@@ -98,16 +91,16 @@ with left:
     )
 
     show_pie_for_selected_border(*selected_border)
-""""""
-with right:  # line
-    collection = db["daily_average_flows"]
 
+# right side: line chart
+with right:
+    # get data from the database and make it into a pandas df
+    collection = db["daily_average_flows"]
     data = list(collection.find({}, {"_id": 0}))
     pdf = pd.DataFrame(data)
-
     pdf["timestamp"] = pd.to_datetime(pdf["timestamp"])
 
-    """"""
+    # available selections, months and years
     month_names = [
         "January",
         "February",
@@ -125,19 +118,23 @@ with right:  # line
 
     years = sorted(pdf["timestamp"].dt.year.unique(), reverse=True)
 
+    # select box to choose year
     selected_year = st.selectbox("Select year", years, key="flow_year")
 
+    # pill buttons for selecting months :
     available_months = set(
         pdf.loc[
             pdf["timestamp"].dt.year == selected_year, "timestamp"
         ].dt.month.unique()
     )
 
+    # adding "no data" to the buttons that points to months without data
     month_labels = [
         month if i + 1 in available_months else f"{month} (no data)"
         for i, month in enumerate(month_names)
     ]
 
+    # making the actual buttons
     selected_month = st.pills(
         "Select month",
         options=month_labels,
@@ -149,6 +146,7 @@ with right:  # line
         key="flow_month",
     )
 
+    # show line plot for given year and month, if there is data associated with that month
     if selected_month and "(no data)" not in selected_month:
         month_number = month_names.index(selected_month)
 
@@ -184,16 +182,17 @@ with right:  # line
             fig.tight_layout()
 
             st.pyplot(fig)
+    # explain to the user why they dont see a plot and tell them what to do
     else:
         st.info("Select a month with available data.")
 
-""""""
-
+# explain data source for both plots on right and left side:
 with st.expander("Data source"):
     st.write(
-        "Data comes from the MongoDB database `power_data`, "
-        "collection `annual_flows`. It contains aggregated power "
-        "flows between zones, with no timestamp information."
+        "The data comes from the MongoDB database `power_data`.\n\n"
+        "- **Flow distribution (pie chart):** Collection `annual_flows`, "
+        "containing annual aggregated power flows between zones for 2025.\n\n"
+        "- **Average power flows (line chart):** Collection "
+        "`daily_average_flows`, containing daily average power flows "
+        "between zones, with timestamps used to filter by year and month."
     )
-
-""""""
