@@ -1,5 +1,6 @@
 import streamlit as st
 from utils import Buttons
+from styling.colours import COLOURS
 
 Buttons.home_button()
 
@@ -54,16 +55,29 @@ with left:
         if not pie_df.empty:
             fig, ax = plt.subplots()
 
-            ax.pie(
+            wedges, texts, autotexts = ax.pie(
                 pie_df["total_mw"],
                 labels=pie_df["from_zone"] + " → " + pie_df["to_zone"],
                 autopct="%1.1f%%",
                 startangle=90,
+                colors=[
+                    COLOURS["PINK"],
+                    COLOURS["DARK_PINK"],
+                ],
+                textprops={"color": COLOURS["ALMOST_WHITE_PINK"], "fontweight": "bold"},
             )
+            for text in texts:
+                text.set_color(COLOURS["ALMOST_BLACK_PINK"])
+
+            for text in autotexts:
+                text.set_color(COLOURS["ALMOST_WHITE_PINK"])
+                text.set_fontweight("bold")
+                text.set_fontsize(13)
 
             ax.set_title(f"Power Flow Between {zone_a} and {zone_b}")
             st.pyplot(fig)
             plt.close(fig)
+
         else:
             st.warning(f"No flow data found for {zone_a} and {zone_b}.")
 
