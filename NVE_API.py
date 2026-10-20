@@ -23,4 +23,20 @@ def get_nve_data(start_date=None, end_date=None):
     if end_date is not None:
         df = df[df["dato_Id"] <= pd.to_datetime(end_date)]
 
-    return df.sort_values("dato_Id").reset_index(drop=True)
+    df = df.rename(
+        columns={
+            "dato_Id": "date",
+            "omrType": "area type",
+            "omrnr": "area number",
+            "iso_aar": "year (ISO)",
+            "iso_uke": "week (ISO)",
+            "fyllingsgrad": "reservoir level",
+            "kapasitet_TWh": "capacity (TWh)",
+            "fylling_TWh": "level (TWh)",
+            "neste_Publiseringsdato": "next publishing date",
+            "fyllingsgrad_forrige_uke": "reservoir level last week",
+            "endring_fyllingsgrad": "change level",
+        }
+    )
+
+    return df.sort_values("date").reset_index(drop=True)

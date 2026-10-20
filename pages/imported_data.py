@@ -7,9 +7,9 @@ from styling.colours import COLOURS
 Buttons.home_button()
 st.title("Imported data")
 
-from utils import load_data
+from NVE_API import get_nve_data
 
-df = load_data("reservoirs.csv")
+df = get_nve_data()
 
 
 def display_data_table(df):
@@ -17,10 +17,7 @@ def display_data_table(df):
 
     last_month = df["date"].max() - pd.DateOffset(months=1)
 
-    last_month_df = df[
-        (df["date"] > last_month) &
-        (df["date"] <= df["date"].max())
-    ]
+    last_month_df = df[(df["date"] > last_month) & (df["date"] <= df["date"].max())]
 
     rows = []
 
@@ -29,12 +26,9 @@ def display_data_table(df):
         "capacity (TWh)",
         "level (TWh)",
         "reservoir level last week",
-        "change level"
+        "change level",
     ]:
-        rows.append({
-            "Column": column,
-            "Data": last_month_df[column].tolist()
-        })
+        rows.append({"Column": column, "Data": last_month_df[column].tolist()})
 
     table_df = pd.DataFrame(rows)
 
@@ -42,14 +36,21 @@ def display_data_table(df):
         table_df,
         column_config={
             "Data": st.column_config.LineChartColumn(
-                "Last month", 
-                color=COLOURS["PINK"]
+                "Last month", color=COLOURS["PINK"]
             )
         },
         hide_index=True,
-        use_container_width=True
+        use_container_width=True,
     )
 
-display_data_table(df)
 
-df
+# Select area
+areas = df["area type"].unique().tolist()
+
+selected_area = st.radio("Select area", areas, horizontal=True)
+
+# Filter data
+filtered_df = df[df["area type"] == selected_area]
+
+# Display table and plots
+display_data_table(filtered_df)
