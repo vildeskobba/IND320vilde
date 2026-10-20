@@ -29,9 +29,7 @@ db = client["power_data"]
 """"""
 
 
-left, right = st.columns(2)
-import matplotlib.pyplot as plt
-import pandas as pd
+left, right = st.columns([2, 3])
 
 
 with left:
