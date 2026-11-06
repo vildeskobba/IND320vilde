@@ -50,8 +50,25 @@ areas = df["area type"].unique().tolist()
 
 selected_area = st.radio("Select area", areas, horizontal=True)
 
-# Filter data
+# Date selector
+min_date = df["date"].min().date()
+max_date = df["date"].max().date()
+
+start_date, end_date = st.date_input(
+    "Select date range",
+    value=(max_date - pd.DateOffset(months=1), max_date),
+    min_value=min_date,
+    max_value=max_date,
+)
+
+# Filter data by area
 filtered_df = df[df["area type"] == selected_area]
 
-# Display table and plots
+# Filter data by selected dates
+filtered_df = filtered_df[
+    (filtered_df["date"].dt.date >= start_date)
+    & (filtered_df["date"].dt.date <= end_date)
+]
+
+# Display table
 display_data_table(filtered_df)
