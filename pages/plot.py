@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 
-from utils import Buttons
+from utils.utils import Buttons
 from styling import style_funcs
 
 Buttons.home_button()
@@ -11,7 +11,7 @@ st.title("Reservoir data")
 
 
 # Load data function, via API
-from NVE_API import get_nve_data
+from utils.APIs.NVE_API import get_nve_data
 
 # Columns that can be plotted
 y_axis_cols = [

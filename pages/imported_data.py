@@ -1,13 +1,13 @@
 import streamlit as st
 import pandas as pd
 
-from utils import Buttons
+from utils.utils import Buttons
 from styling.colours import COLOURS
 
 Buttons.home_button()
 st.title("Imported data")
 
-from NVE_API import get_nve_data
+from utils.APIs.NVE_API import get_nve_data
 
 # this function uses the api to fetch data
 df = get_nve_data()

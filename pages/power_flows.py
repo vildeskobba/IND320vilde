@@ -1,5 +1,5 @@
 import streamlit as st
-from utils import Buttons
+from utils.utils import Buttons
 from styling.colours import COLOURS
 
 Buttons.home_button()
