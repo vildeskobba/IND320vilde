@@ -1,4 +1,4 @@
 # Links 
 github repo: https://github.com/vildeskobba/IND320vilde 
 Streamlit app: https://ind320vilde.streamlit.app/ 
-Panopto_video: 
+Panopto_video: https://nmbu.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=cd4f7492-70dd-4a36-b733-b4fd01525c01
