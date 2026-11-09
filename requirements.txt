@@ -7,3 +7,10 @@ pymongo
 entsoe-py
 python-dotenv
 pymongo
+geopandas
+openmeteo-requests
+requests-cache
+retry-requests
+folium
+streamlit-folium
+statsmodels

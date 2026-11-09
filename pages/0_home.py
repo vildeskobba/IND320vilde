@@ -9,13 +9,18 @@ st.write("On other pages, you can always press the house to get back to this pag
 
 
 if st.button("Imported data"):
-    st.switch_page("pages/imported_data.py")
+    st.switch_page("pages/1_imported_data.py")
 
 if st.button("Plot"):
-    st.switch_page("pages/plot.py")
+    st.switch_page("pages/2_plot.py")
 
 if st.button("Power flows"):
-    st.switch_page("pages/power_flows.py")
+    st.switch_page("pages/3_power_flows.py")
 
+if st.button("Magasin analysis"):
+    st.switch_page("pages/4_magasin_analysis.py")
+
+if st.button("Meteorological analysis"):
+    st.switch_page("pages/5_meteorological_analysis.py")
 
 style_funcs.style_home_menu_button()
