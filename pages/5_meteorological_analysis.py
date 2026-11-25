@@ -11,7 +11,7 @@ Buttons.home_button()
 st.title("Meteorological analysis")
 
 # Load shapefile
-budomrader = gpd.read_file("data_nve/Budområder/Budområder.shp")
+budomrader = gpd.read_file("data/nve/Budområder/Budområder.shp")
 # Convert to latitude/longitude
 budomrader = budomrader.to_crs(epsg=4326)
 
@@ -29,14 +29,14 @@ selected_areas = st.pills("Select delivery areas", areas, selection_mode="multi"
 
 # Choose selected areas, or all areas if none are selected
 areas_to_load = selected_areas if selected_areas else areas
+areas_to_load = [area.replace(" ", "_") for area in areas_to_load]
 
 weather_data = pd.concat(
     [globals()[f"weather_data_{area}"].assign(area=area) for area in areas_to_load],
     ignore_index=True,
 )
 
-
-st.write(f"Number of weather observations: {len(weather_data)}")
+st.write(f"Number of weather observations: {len(weather_data):,.0f}".replace(",", " "))
 """"""
 
 
