@@ -16,38 +16,26 @@ budomrader = gpd.read_file("data_nve/Budområder/Budområder.shp")
 budomrader = budomrader.to_crs(epsg=4326)
 
 # load weather data
-weather_data = pd.read_parquet("data_weather/weather_data.parquet")
+weather_data_NO_1 = pd.read_parquet("data/open_meteo/NO_1.parquet")
+weather_data_NO_2 = pd.read_parquet("data/open_meteo/NO_2.parquet")
+weather_data_NO_3 = pd.read_parquet("data/open_meteo/NO_3.parquet")
+weather_data_NO_4 = pd.read_parquet("data/open_meteo/NO_4.parquet")
+weather_data_NO_5 = pd.read_parquet("data/open_meteo/NO_5.parquet")
 
 
 # Area selection
 areas = sorted(budomrader["budomr"].dropna().unique().tolist())
 selected_areas = st.pills("Select delivery areas", areas, selection_mode="multi")
-""""""
 
-if selected_areas:
-    # Convert weather data to GeoDataFrame
-    weather_gdf = gpd.GeoDataFrame(
-        weather_data,
-        geometry=gpd.points_from_xy(
-            weather_data["longitude"],
-            weather_data["latitude"],
-        ),
-        crs="EPSG:4326",
-    )
+# Choose selected areas, or all areas if none are selected
+areas_to_load = selected_areas if selected_areas else areas
 
-    # Filter selected delivery areas
-    selected_polygons = budomrader[budomrader["budomr"].isin(selected_areas)]
+weather_data = pd.concat(
+    [globals()[f"weather_data_{area}"].assign(area=area) for area in areas_to_load],
+    ignore_index=True,
+)
 
-    # Spatial join
-    weather_gdf = gpd.sjoin(
-        weather_gdf,
-        selected_polygons,
-        how="inner",
-        predicate="within",
-    )
 
-    # Convert back to DataFrame
-    weather_data = pd.DataFrame(weather_gdf.drop(columns=["geometry", "index_right"]))
 st.write(f"Number of weather observations: {len(weather_data)}")
 """"""
 
