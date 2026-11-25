@@ -14,3 +14,4 @@ retry-requests
 folium
 streamlit-folium
 statsmodels
+river
