@@ -176,6 +176,55 @@ if selected_area is not None:
                 target="reservoir_level",
                 model_params=model_params,
             )
+
+            # Prepare historical data
+            historical = magasin_filtered[
+                magasin_filtered["area"] == selected_area
+            ].copy()
+
+            historical["date"] = pd.to_datetime(
+                [
+                    date.fromisocalendar(int(y), int(w), 1)
+                    for y, w in zip(historical["iso_year"], historical["iso_week"])
+                ]
+            )
+
+            # Create figure
+            fig = go.Figure()
+
+            # Historical values
+            fig.add_trace(
+                go.Scatter(
+                    x=historical["date"],
+                    y=historical["reservoir_level"],
+                    mode="lines",
+                    name="Historical reservoir filling",
+                )
+            )
+
+            # Forecast values
+            fig.add_trace(
+                go.Scatter(
+                    x=forecast["date"],
+                    y=forecast["predicted_filling"],
+                    mode="lines+markers",
+                    name="Forecast",
+                    line=dict(dash="dash"),
+                )
+            )
+
+            # Layout
+            fig.update_layout(
+                title=f"Reservoir filling forecast - {selected_area}",
+                xaxis_title="Date",
+                yaxis_title="Reservoir filling",
+                template="plotly_white",
+                hovermode="x unified",
+                legend=dict(orientation="h"),
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
             st.dataframe(forecast)
 
         elif evaluate_button:
