@@ -93,7 +93,7 @@ with tab1:
             weather_data, cutoff=cutoff, n_std=n_std
         )
 
-        st.pyplot(fig)
+        st.plotly_chart(fig, use_container_width=True)
 
         st.subheader("Outlier statistics")
         st.metric("Number of outliers", len(outliers))
@@ -129,7 +129,7 @@ with tab2:
             weather_data, contamination=contamination, n_neighbors=n_neighbors
         )
 
-        st.pyplot(fig)
+        st.plotly_chart(fig, use_container_width=True)
 
         st.subheader("Anomaly statistics")
 

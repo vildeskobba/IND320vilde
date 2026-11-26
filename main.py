@@ -17,6 +17,11 @@ pages = [
         title="Meteorological analysis",
         icon=":material/cloud:",
     ),
+    st.Page(
+        "pages/6_map.py",
+        title="Map",
+        icon=":material/cloud:",
+    ),
 ]
 
 pg = st.navigation(pages, position="sidebar")

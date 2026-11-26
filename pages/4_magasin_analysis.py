@@ -36,7 +36,7 @@ with tab1:
     if st.button("Run STL"):
         fig = plot_stl(filtered_df, seasonal=seasonal, robust=robust)
 
-        st.pyplot(fig)
+        st.plotly_chart(fig, use_container_width=True)
 
 with tab2:
     st.subheader("Spectrogram")
@@ -53,4 +53,4 @@ with tab2:
             filtered_df, window_length=window_length, overlap=overlap
         )
 
-        st.pyplot(fig)
+        st.plotly_chart(fig, use_container_width=True)

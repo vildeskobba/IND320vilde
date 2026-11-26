@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
 from sklearn.preprocessing import StandardScaler
 
 from utils.utils import Buttons
@@ -8,7 +8,6 @@ from styling import style_funcs
 
 Buttons.home_button()
 st.title("Reservoir data")
-
 
 # Load data function, via API
 from utils.APIs.NVE_API import get_nve_data
@@ -47,7 +46,7 @@ df = get_nve_data(
     end_date=slider_end,
 )
 
-plot_df = df
+plot_df = df.copy()
 
 # Decide which columns to plot
 if selected == "All":
@@ -57,62 +56,101 @@ else:
 
 # Standardize selected variables
 scaler = StandardScaler()
-
 plot_df[selected_cols] = scaler.fit_transform(plot_df[selected_cols])
-
-# Create the large figure
-fig = plt.figure(figsize=(12, 10))
-gs = fig.add_gridspec(2, 2, height_ratios=[2, 1])
 
 # --------------------------------------------------
 # 1. Variables over time
 # --------------------------------------------------
 
-ax = fig.add_subplot(gs[0, :])
+st.subheader("Standardized reservoir data over time")
 
-for col in selected_cols:
-    ax.scatter(plot_df["date"], plot_df[col], s=0.3, label=col)
+long_df = plot_df.melt(
+    id_vars=["date"],
+    value_vars=selected_cols,
+    var_name="Variable",
+    value_name="Standardized value",
+)
 
-ax.set_xlabel("Date")
-ax.set_ylabel("Standardized value (z-score)")
-ax.set_title("Standardized reservoir data over time")
-ax.legend()
-ax.grid(True)
+fig_time = px.scatter(
+    long_df,
+    x="date",
+    y="Standardized value",
+    color="Variable",
+    title="Standardized reservoir data over time",
+    opacity=0.7,
+)
+
+fig_time.update_traces(marker=dict(size=3))
+
+fig_time.update_layout(
+    xaxis_title="Date",
+    yaxis_title="Standardized value (z-score)",
+    hovermode="x unified",
+    height=500,
+)
+
+st.plotly_chart(fig_time, use_container_width=True)
 
 # --------------------------------------------------
 # 2. Variables by area type
 # --------------------------------------------------
 
-ax = fig.add_subplot(gs[1, 0])
+st.subheader("Reservoir data by area type")
 
-for i, col in enumerate(selected_cols):
-    data = [group[col].dropna() for _, group in plot_df.groupby("area type")]
+area_type_df = plot_df.melt(
+    id_vars=["area type"],
+    value_vars=selected_cols,
+    var_name="Variable",
+    value_name="Standardized value",
+)
 
-    ax.boxplot(data, positions=range(len(data)))
+fig_area_type = px.box(
+    area_type_df,
+    x="area type",
+    y="Standardized value",
+    color="Variable",
+    title="Reservoir data by area type",
+)
 
-ax.set_xlabel("Area type")
-ax.set_ylabel("Standardized value")
-ax.set_title("By area type")
+fig_area_type.update_layout(
+    xaxis_title="Area type",
+    yaxis_title="Standardized value",
+    boxmode="group",
+    height=450,
+)
+
+st.plotly_chart(fig_area_type, use_container_width=True)
 
 # --------------------------------------------------
 # 3. Variables by area number
 # --------------------------------------------------
 
-ax = fig.add_subplot(gs[1, 1])
+st.subheader("Reservoir data by area number")
 
-for col in selected_cols:
-    data = [group[col].dropna() for _, group in plot_df.groupby("area number")]
+area_number_df = plot_df.melt(
+    id_vars=["area number"],
+    value_vars=selected_cols,
+    var_name="Variable",
+    value_name="Standardized value",
+)
 
-    ax.boxplot(data)
+fig_area_number = px.box(
+    area_number_df,
+    x="area number",
+    y="Standardized value",
+    color="Variable",
+    title="Reservoir data by area number",
+)
 
-ax.set_xlabel("Area number")
-ax.set_ylabel("Standardized value")
-ax.set_title("By area number")
+fig_area_number.update_layout(
+    xaxis_title="Area number",
+    yaxis_title="Standardized value",
+    boxmode="group",
+    height=450,
+)
 
-plt.tight_layout()
+st.plotly_chart(fig_area_number, use_container_width=True)
 
-st.pyplot(fig)
-
-
+# Styling
 style_funcs.style_selectbox()
 style_funcs.style_slider()

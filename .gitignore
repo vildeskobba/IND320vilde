@@ -221,3 +221,7 @@ __marimo__/
 
 # Spark
 spark-warehouse/
+
+
+
+.DS_Store
