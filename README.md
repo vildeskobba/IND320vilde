@@ -1,4 +1,8 @@
+## Repository Structure
+
+```text
 IND320vilde/
+│
 ├── main.py
 ├── requirements.txt
 ├── log_and_ai_declaration.ipynb
@@ -57,3 +61,5 @@ IND320vilde/
     ├── 3_power_flows.py
     ├── 4_magasin_analysis.py
     └── 5_meteorological_analysis.py
+
+```
