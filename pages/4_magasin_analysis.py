@@ -10,7 +10,6 @@ from styling.colours import COLOURS
 Buttons.home_button()
 st.title("Magasin analysis")
 
-
 # Retrieve reservoir data from NVE API
 from utils.APIs.NVE_API import get_nve_data
 
@@ -36,7 +35,7 @@ with tab1:
     if st.button("Run STL"):
         fig = plot_stl(filtered_df, seasonal=seasonal, robust=robust)
 
-        st.pyplot(fig)
+        st.plotly_chart(fig, use_container_width=True)
 
 with tab2:
     st.subheader("Spectrogram")
@@ -53,4 +52,4 @@ with tab2:
             filtered_df, window_length=window_length, overlap=overlap
         )
 
-        st.pyplot(fig)
+        st.plotly_chart(fig, use_container_width=True)

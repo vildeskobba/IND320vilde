@@ -4,19 +4,25 @@ st.set_page_config(page_title="My App", layout="wide", initial_sidebar_state="ex
 
 pages = [
     st.Page("pages/0_home.py", title="Home", icon=":material/home:"),
-    st.Page("pages/1_imported_data.py", title="Imported data", icon=":material/table:"),
     st.Page("pages/2_plot.py", title="Plot", icon=":material/analytics:"),
     st.Page("pages/3_power_flows.py", title="Power flows", icon=":material/bolt:"),
     st.Page(
         "pages/4_magasin_analysis.py",
         title="Magasin analysis",
-        icon=":material/south_america:",
+        icon=":material/water_drop:",
     ),
     st.Page(
         "pages/5_meteorological_analysis.py",
         title="Meteorological analysis",
         icon=":material/cloud:",
     ),
+    st.Page("pages/7_forecast.py", title="Forecast", icon=":material/cloud:"),
+    st.Page(
+        "pages/6_map.py",
+        title="Colourmap",
+        icon=":material/south_america:",
+    ),
+    st.Page("pages/9_imported_data.py", title="Imported data", icon=":material/table:"),
 ]
 
 pg = st.navigation(pages, position="sidebar")

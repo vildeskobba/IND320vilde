@@ -6,7 +6,7 @@ from entsoe import EntsoePandasClient
 import time
 
 
-def get_entsoe_data(ENTSOE_API_TOKEN, zone_a, zone_b):
+def get_entsoe_data(ENTSOE_API_TOKEN, zone_a, zone_b, start=None, end=None):
     start_time = time.perf_counter()
 
     api_key = ENTSOE_API_TOKEN
@@ -16,12 +16,19 @@ def get_entsoe_data(ENTSOE_API_TOKEN, zone_a, zone_b):
 
     client = EntsoePandasClient(api_key=api_key)
 
-    # Last 2 years
-    end = pd.Timestamp.now(tz="Europe/Brussels").normalize()
-    start = end - pd.DateOffset(years=2)
+    if start is None or end is None:
+        end = pd.Timestamp.now(tz="Europe/Brussels").normalize()
+        start = end - pd.DateOffset(years=2)
+
+    # Split into one-year periods
     split = start + pd.DateOffset(years=1)
 
-    periods = [(start, split), (split, end)]
+    periods = [
+        (start, min(split, end)),
+    ]
+
+    if split < end:
+        periods.append((split, end))
 
     results = []
 
