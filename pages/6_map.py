@@ -6,11 +6,11 @@ from streamlit_folium import st_folium
 from pymongo import MongoClient
 import certifi
 import branca.colormap as cm
-from utils.utils import Buttons, plot_precipitation_outliers, plot_temperature_anomalies
+from utils.utils import Buttons
 from styling.colours import COLOURS
 
 Buttons.home_button()
-st.title("Map")
+st.title("Colour map")
 
 
 # Connect to MongoDB
@@ -82,6 +82,12 @@ m = folium.Map(
         budomrader.geometry.centroid.x.mean(),
     ],
     zoom_start=4,
+    zoom_control=False,
+    scrollWheelZoom=False,
+    dragging=False,
+    doubleClickZoom=False,
+    touchZoom=False,
+    boxZoom=False,
 )
 bounds = budomrader.total_bounds
 
@@ -121,15 +127,13 @@ colormap = cm.LinearColormap(
 values = df_selected.set_index("area")[numerical_col].to_dict()
 
 
-# Style each geographical area
-def style_function(feature):
+def map_style_function(feature):
     area = feature["properties"]["budomr"]
     value = values.get(area)
 
     return {
         "fillColor": colormap(value) if pd.notna(value) else "white",
-        "color": "black",
-        "weight": 1,
+        "color": COLOURS["PINK"],
         "fillOpacity": 0.7,
     }
 
@@ -137,14 +141,24 @@ def style_function(feature):
 # Add GeoJSON layer
 folium.GeoJson(
     budomrader,
-    style_function=style_function,
+    style_function=map_style_function,
     tooltip=folium.GeoJsonTooltip(
         fields=["budomr"],
         aliases=["Area:"],
+    ),
+    popup=folium.Popup(
+        "Go to the Home page to select an area on the map to use across pages.",
+        max_width=300,
     ),
 ).add_to(m)
 
 # Add legend
 colormap.add_to(m)
 
-st_folium(m, width=700, height=800)
+map_data = st_folium(
+    m,
+    width=700,
+    height=800,
+    key="area_selection_map",
+    returned_objects=["last_active_drawing"],
+)

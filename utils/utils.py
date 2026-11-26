@@ -9,14 +9,71 @@ from scipy.fft import dct, idct
 
 from styling import style_funcs
 from styling.colours import COLOURS
+from datetime import date
+from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 
 class Buttons:
     @staticmethod
     def home_button():
         if st.button("", icon=":material/home:", key="home_button"):
-            st.switch_page("pages/home.py")
+            st.switch_page("pages/0_home.py")
         style_funcs.style_home_button()
+
+    @st.dialog("No area selected on map!")
+    def no_area_selected_popup():
+        st.write(
+            "Go to the home page and select an area on the map to use across pages. "
+        )
+        if st.button("Go to home page", icon=":material/home:"):
+            st.switch_page("pages/0_home.py")
+
+    def use_map_selected_area_button():
+        if "use_map_selected_area" not in st.session_state:
+            st.session_state["use_map_selected_area"] = False
+        if "map_selected_area" not in st.session_state:
+            st.session_state["map_selected_area"] = None
+
+        selected_area = st.session_state.get("map_selected_area")
+        available = selected_area is not None
+
+        st.markdown(
+            f"""
+            <style>
+            div.stButton > button[kind="primary"] {{
+                background-color: {COLOURS["DARK_PINK"] if available else COLOURS["ALMOST_WHITE_PINK"]};
+                color: {COLOURS["ALMOST_WHITE_PINK"] if available else COLOURS["LIGHT_PINK"]};
+                border: none;
+                width: 100%;
+                height: 60px;
+                font-size: 20px;
+                font-weight: bold;
+                border-radius: 12px;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        button_text = (
+            "Stop using map selected area from home page"
+            if st.session_state["use_map_selected_area"]
+            else "Use map selected area from home page"
+        )
+
+        if st.button(
+            button_text,
+            key="use_area_button",
+            type="primary",
+            use_container_width=True,
+        ):
+            if not available:
+                Buttons.no_area_selected_popup()
+            else:
+                st.session_state["use_map_selected_area"] = not st.session_state[
+                    "use_map_selected_area"
+                ]
+                st.rerun()
 
 
 @st.cache_data
@@ -145,6 +202,77 @@ def plot_spectrogram(data, window_length=365, overlap=300):
     )
 
     return fig
+
+
+def plot_precipitation_anomalies(weather_data, contamination=0.01, n_neighbors=20):
+    if weather_data.empty:
+        st.write("There is no data for the selected area.")
+        fig = go.Figure()
+        return fig, pd.DataFrame()
+
+    # Calculate average precipitation across locations
+    precipitation = (
+        weather_data.groupby("time")["precipitation"].mean().sort_index().dropna()
+    )
+
+    # LOF expects a 2D array
+    X = precipitation.to_numpy().reshape(-1, 1)
+
+    # Detect anomalies
+    lof = LocalOutlierFactor(
+        n_neighbors=n_neighbors,
+        contamination=contamination,
+    )
+
+    predictions = lof.fit_predict(X)
+    anomaly_mask = predictions == -1
+
+    # Plot using Plotly
+    fig = go.Figure()
+
+    # Average precipitation
+    fig.add_trace(
+        go.Scatter(
+            x=precipitation.index,
+            y=precipitation.values,
+            mode="lines",
+            name="Average precipitation",
+            line=dict(width=1),
+        )
+    )
+
+    # Anomalies
+    fig.add_trace(
+        go.Scatter(
+            x=precipitation.index[anomaly_mask],
+            y=precipitation[anomaly_mask],
+            mode="markers",
+            name="Anomalies (LOF)",
+            marker=dict(
+                color=COLOURS["PINK"],
+                size=7,
+            ),
+        )
+    )
+
+    fig.update_layout(
+        title="Average precipitation and detected anomalies",
+        xaxis_title="Time",
+        yaxis_title="Precipitation (mm)",
+        hovermode="x unified",
+        height=600,
+    )
+
+    # Summarise anomalies
+    anomaly_summary = pd.DataFrame(
+        {
+            "time": precipitation.index[anomaly_mask],
+            "precipitation": precipitation[anomaly_mask],
+            "LOF score": lof.negative_outlier_factor_[anomaly_mask],
+        }
+    )
+
+    return fig, anomaly_summary
 
 
 def plot_temperature_anomalies(weather_data, contamination=0.01, n_neighbors=20):
@@ -324,6 +452,114 @@ def plot_precipitation_outliers(weather_data, cutoff=30, n_std=3):
     return fig, outlier_summary
 
 
+def plot_temperature_outliers(weather_data, cutoff=30, n_std=3):
+    """
+    Plot average temperature and identify outliers using
+    high-pass DCT filtering and robust SPC boundaries.
+    """
+
+    if weather_data.empty:
+        st.write("There is no data for the selected area.")
+        return go.Figure(), pd.DataFrame()
+
+    # Average temperature across all locations
+    temperature = (
+        weather_data.groupby("time")["temperature"].mean().sort_index().dropna()
+    )
+
+    x = temperature.to_numpy()
+
+    # DCT high-pass filtering
+    coefficients = dct(x, norm="ortho")
+    coefficients[:cutoff] = 0
+
+    satv = idct(coefficients, norm="ortho")
+
+    # Calculate trend
+    trend = x - satv
+
+    # Robust statistics
+    median = np.median(satv)
+    mad = np.median(np.abs(satv - median))
+    robust_std = 1.4826 * mad
+
+    # Time-dependent SPC boundaries
+    upper = trend + median + n_std * robust_std
+    lower = trend + median - n_std * robust_std
+
+    # Identify outliers
+    outliers = (x > upper) | (x < lower)
+
+    # Plot
+    fig = go.Figure()
+
+    # Original temperature
+    fig.add_trace(
+        go.Scatter(
+            x=temperature.index,
+            y=x,
+            mode="lines",
+            name="Average temperature",
+            line=dict(color=COLOURS["ALMOST_BLACK_PINK"], width=1),
+        )
+    )
+
+    # Upper boundary
+    fig.add_trace(
+        go.Scatter(
+            x=temperature.index,
+            y=upper,
+            mode="lines",
+            name=f"SPC boundaries ({n_std} robust std)",
+            line=dict(color=COLOURS["PINK"], dash="dash", width=1.5),
+        )
+    )
+
+    # Lower boundary
+    fig.add_trace(
+        go.Scatter(
+            x=temperature.index,
+            y=lower,
+            mode="lines",
+            name="Lower SPC boundary",
+            line=dict(color=COLOURS["PINK"], dash="dash", width=1.5),
+            showlegend=False,
+        )
+    )
+
+    # Outliers
+    fig.add_trace(
+        go.Scatter(
+            x=temperature.index[outliers],
+            y=x[outliers],
+            mode="markers",
+            name="Outliers",
+            marker=dict(color=COLOURS["DARK_PINK"], size=6),
+        )
+    )
+
+    fig.update_layout(
+        title="Average temperature with robust SPC boundaries",
+        xaxis_title="Time",
+        yaxis_title="Temperature (°C)",
+        hovermode="x unified",
+        height=600,
+    )
+
+    # Outlier summary
+    outlier_summary = pd.DataFrame(
+        {
+            "time": temperature.index[outliers],
+            "temperature": x[outliers],
+            "lower_bound": lower[outliers],
+            "upper_bound": upper[outliers],
+            "SATV": satv[outliers],
+        }
+    )
+
+    return fig, outlier_summary
+
+
 def forecast_reservoir(
     magasin_df,
     entso_df=None,
@@ -379,6 +615,8 @@ def forecast_reservoir(
     # --------------------------------------------------
 
     df = magasin_df[magasin_df["area"] == area].copy()
+    if df.empty:
+        st.write("There is no data for the chosen dates. ")
 
     df["date"] = [
         date.fromisocalendar(int(y), int(w), 1)
@@ -621,3 +859,92 @@ def forecast_reservoir(
         result["predicted_filling"] = result["predicted_filling"].clip(0, 1)
 
     return result
+
+
+def evaluate_forecast(
+    magasin_df,
+    entso_df=None,
+    weather_df=None,
+    exchange_df=None,
+    area="NO_1",
+    model_type="river",
+    history_weeks=52,
+    horizon_weeks=6,
+    data_sources=("weather", "entso", "exchange"),
+    target="reservoir_level",
+    model_params=None,
+    test_windows=4,
+):
+
+    df = magasin_df[magasin_df["area"] == area].copy()
+
+    df["date"] = pd.to_datetime(
+        [
+            pd.Timestamp(date.fromisocalendar(int(y), int(w), 1))
+            for y, w in zip(df["iso_year"], df["iso_week"])
+        ]
+    )
+
+    df = df.sort_values("date").reset_index(drop=True)
+
+    errors = []
+
+    # Expanding chronological training windows.
+    for window in range(test_windows):
+        test_end = len(df) - window * horizon_weeks
+
+        test_start = test_end - horizon_weeks
+
+        train_end = test_start
+
+        if train_end < 13:
+            continue
+
+        train = df.iloc[:train_end]
+
+        actual = df.iloc[test_start:test_end][target].values
+
+        if len(actual) != horizon_weeks:
+            continue
+
+        def subset_source(source):
+
+            if source is None:
+                return None
+
+            source_dates = pd.to_datetime(
+                [
+                    date.fromisocalendar(int(y), int(w), 1)
+                    for y, w in zip(source["iso_year"], source["iso_week"])
+                ]
+            )
+
+            return source.loc[source_dates <= train["date"].max()].copy()
+
+        prediction = forecast_reservoir(
+            magasin_df=train,
+            entso_df=subset_source(entso_df),
+            weather_df=subset_source(weather_df),
+            exchange_df=subset_source(exchange_df),
+            area=area,
+            model_type=model_type,
+            history_weeks=history_weeks,
+            horizon_weeks=horizon_weeks,
+            data_sources=data_sources,
+            target=target,
+            model_params=model_params,
+        )
+
+        predicted = prediction["predicted_filling"].values
+
+        errors.append(
+            {
+                "MAE": mean_absolute_error(actual, predicted),
+                "RMSE": np.sqrt(mean_squared_error(actual, predicted)),
+            }
+        )
+
+    if not errors:
+        raise ValueError("Not enough historical observations for backtesting.")
+
+    return pd.DataFrame(errors)

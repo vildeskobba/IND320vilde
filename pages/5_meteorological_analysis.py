@@ -4,7 +4,13 @@ import geopandas as gpd
 import folium
 from streamlit_folium import st_folium
 
-from utils.utils import Buttons, plot_precipitation_outliers, plot_temperature_anomalies
+from utils.utils import (
+    Buttons,
+    plot_precipitation_outliers,
+    plot_temperature_anomalies,
+    plot_temperature_outliers,
+    plot_precipitation_anomalies,
+)
 from styling.colours import COLOURS
 
 Buttons.home_button()
@@ -22,61 +28,105 @@ weather_data_NO_3 = pd.read_parquet("data/open_meteo/NO_3.parquet")
 weather_data_NO_4 = pd.read_parquet("data/open_meteo/NO_4.parquet")
 weather_data_NO_5 = pd.read_parquet("data/open_meteo/NO_5.parquet")
 
+# Select what to analyze
+analyze = st.segmented_control(
+    "Analyze anomalies and outliers for:",
+    options=["Percipation", "Temperature"],
+    default="Temperature",
+    selection_mode="single",
+)
+
 
 # Area selection
 areas = sorted(budomrader["budomr"].dropna().unique().tolist())
-selected_areas = st.pills("Select delivery areas", areas, selection_mode="multi")
 
-# Choose selected areas, or all areas if none are selected
-areas_to_load = selected_areas if selected_areas else areas
-areas_to_load = [area.replace(" ", "_") for area in areas_to_load]
+Buttons.use_map_selected_area_button()
 
-weather_data = pd.concat(
-    [globals()[f"weather_data_{area}"].assign(area=area) for area in areas_to_load],
-    ignore_index=True,
-)
 
-st.write(f"Number of weather observations: {len(weather_data):,.0f}".replace(",", " "))
+col1, col2 = st.columns([2, 1])
+
+with col1:
+    if (
+        st.session_state.get("use_map_selected_area", False)
+        and st.session_state.get("map_selected_area") is not None
+    ):
+        selected_areas = [st.session_state["map_selected_area"]]
+    else:
+        selected_areas = st.pills(
+            "Select delivery areas",
+            areas,
+            selection_mode="multi",
+        )
+
+    # Choose selected areas, or all areas if none are selected
+    areas_to_load = selected_areas if selected_areas else areas
+
+    st.write("Selected areas:", ", ".join(areas_to_load))
+
+    areas_to_load = [area.replace(" ", "_") for area in areas_to_load]
+
+    weather_data = pd.concat(
+        [globals()[f"weather_data_{area}"].assign(area=area) for area in areas_to_load],
+        ignore_index=True,
+    )
+
+    st.write(
+        f"Number of weather observations: {len(weather_data):,.0f}".replace(",", " ")
+    )
 """"""
+with col2:
 
-
-def map_style_function(feature):
-    area = feature["properties"]["budomr"]
-    if area in (selected_areas or []):
+    def map_style_function(feature):
+        area = feature["properties"]["budomr"]
+        if area in (selected_areas or []):
+            return {
+                "fillColor": COLOURS["PINK"],
+                "color": COLOURS["ALMOST_BLACK_PINK"],
+                "weight": 1,
+                "fillOpacity": 0.8,
+            }
         return {
-            "fillColor": COLOURS["PINK"],
+            "fillColor": COLOURS["ALMOST_WHITE_PINK"],
             "color": COLOURS["ALMOST_BLACK_PINK"],
             "weight": 1,
-            "fillOpacity": 0.8,
+            "fillOpacity": 0.2,
         }
-    return {
-        "fillColor": COLOURS["ALMOST_WHITE_PINK"],
-        "color": COLOURS["ALMOST_BLACK_PINK"],
-        "weight": 1,
-        "fillOpacity": 0.2,
-    }
 
+    # Create map
+    m = folium.Map(
+        location=[
+            budomrader.geometry.centroid.y.mean() + 2,
+            budomrader.geometry.centroid.x.mean() + 5,
+        ],
+        zoom_start=2.5,
+        zoom_control=False,
+        scrollWheelZoom=False,
+        dragging=False,
+        doubleClickZoom=False,
+        touchZoom=False,
+        boxZoom=False,
+    )
 
-# Create map
-m = folium.Map(
-    location=[
-        budomrader.geometry.centroid.y.mean() + 2,
-        budomrader.geometry.centroid.x.mean() + 5,
-    ],
-    zoom_start=2.5,
-)
-folium.GeoJson(
-    budomrader,
-    style_function=map_style_function,
-).add_to(m)
-st_folium(m, width=150, height=300)
-# Add shapefile
-folium.GeoJson(budomrader).add_to(m)
+    # add geojson layer
+    geojson = folium.GeoJson(
+        budomrader,
+        style_function=map_style_function,
+        popup=folium.Popup(
+            "Go to the Home page to select an area on the map to use across pages.",
+            max_width=300,
+        ),
+    )
+    geojson.add_to(m)
+    st_folium(m, width=150, height=300)
+
+    # Add shapefile
+    folium.GeoJson(budomrader).add_to(m)
+
 
 tab1, tab2 = st.tabs(["Outlier / SPC", "Anomaly / LOF"])
 
 with tab1:
-    st.subheader("Precipitation outlier detection")
+    st.subheader("Outlier detection")
 
     cutoff = st.slider("DCT frequency cutoff", min_value=1, max_value=200, value=15)
 
@@ -87,29 +137,49 @@ with tab1:
         value=2.0,
         step=0.5,
     )
-
-    if st.button("Run precipitation analysis"):
-        fig, outliers = plot_precipitation_outliers(
-            weather_data, cutoff=cutoff, n_std=n_std
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-        st.subheader("Outlier statistics")
-        st.metric("Number of outliers", len(outliers))
-
-        st.dataframe(outliers)
-
-        if not outliers.empty:
-            st.download_button(
-                "Download outlier data",
-                outliers.to_csv(index=False),
-                file_name="precipitation_outliers.csv",
-                mime="text/csv",
+    if analyze == "Percipation":
+        if st.button("Run precipitation outlier analysis"):
+            fig, outliers = plot_precipitation_outliers(
+                weather_data, cutoff=cutoff, n_std=n_std
             )
 
+            st.plotly_chart(fig, use_container_width=True)
+
+            st.subheader("Outlier statistics")
+            st.metric("Number of outliers", len(outliers))
+
+            st.dataframe(outliers)
+
+            if not outliers.empty:
+                st.download_button(
+                    "Download outlier data",
+                    outliers.to_csv(index=False),
+                    file_name="precipitation_outliers.csv",
+                    mime="text/csv",
+                )
+    else:
+        if st.button("Run temperature outlier analysis"):
+            fig, outliers = plot_temperature_outliers(
+                weather_data, cutoff=cutoff, n_std=n_std
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+            st.subheader("Outlier statistics")
+            st.metric("Number of outliers", len(outliers))
+
+            st.dataframe(outliers)
+
+            if not outliers.empty:
+                st.download_button(
+                    "Download outlier data",
+                    outliers.to_csv(index=False),
+                    file_name="precipitation_outliers.csv",
+                    mime="text/csv",
+                )
+
 with tab2:
-    st.subheader("Temperature anomaly detection")
+    st.subheader("Anomaly detection")
 
     contamination = st.slider(
         "Expected proportion of anomalies",
@@ -124,23 +194,46 @@ with tab2:
         "Number of neighbours", min_value=5, max_value=100, value=20
     )
 
-    if st.button("Run temperature analysis"):
-        fig, anomalies = plot_temperature_anomalies(
-            weather_data, contamination=contamination, n_neighbors=n_neighbors
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-        st.subheader("Anomaly statistics")
-
-        st.metric("Number of anomalies", len(anomalies))
-
-        st.dataframe(anomalies)
-
-        if not anomalies.empty:
-            st.download_button(
-                "Download anomaly data",
-                anomalies.to_csv(index=False),
-                file_name="temperature_anomalies.csv",
-                mime="text/csv",
+    if analyze == "Percipation":
+        if st.button("Run analysis of percipation anomalies"):
+            fig, anomalies = plot_precipitation_anomalies(
+                weather_data, contamination=contamination, n_neighbors=n_neighbors
             )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+            st.subheader("Anomaly statistics")
+
+            st.metric("Number of anomalies", len(anomalies))
+
+            st.dataframe(anomalies)
+
+            if not anomalies.empty:
+                st.download_button(
+                    "Download anomaly data",
+                    anomalies.to_csv(index=False),
+                    file_name="temperature_anomalies.csv",
+                    mime="text/csv",
+                )
+
+    else:
+        if st.button("Run analysis of temperature anomalies"):
+            fig, anomalies = plot_temperature_anomalies(
+                weather_data, contamination=contamination, n_neighbors=n_neighbors
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+            st.subheader("Anomaly statistics")
+
+            st.metric("Number of anomalies", len(anomalies))
+
+            st.dataframe(anomalies)
+
+            if not anomalies.empty:
+                st.download_button(
+                    "Download anomaly data",
+                    anomalies.to_csv(index=False),
+                    file_name="temperature_anomalies.csv",
+                    mime="text/csv",
+                )

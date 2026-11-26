@@ -9,6 +9,31 @@ st.title("Imported data")
 
 from utils.APIs.NVE_API import get_nve_data
 
+
+# Connect to MongoDB
+@st.cache_resource
+def get_client():
+    return MongoClient(st.secrets["MONGO_URI"], tlsCAFile=certifi.where())
+
+
+client = get_client()
+db = client["power_data"]
+
+# Load weekly averages from MongoDB
+magasin_df = pd.DataFrame(list(db["weekly_averages_magasin"].find({}, {"_id": 0})))
+
+power_flows_df = pd.DataFrame(
+    list(db["weekly_averages_net_power_flows"].find({}, {"_id": 0}))
+)
+
+weather_df = pd.DataFrame(list(db["weekly_averages_weather"].find({}, {"_id": 0})))
+
+
+st.dataframe(magasin_df)
+st.dataframe(power_flows_df)
+st.dataframe(weather_df)
+
+
 # this function uses the api to fetch data
 df = get_nve_data()
 

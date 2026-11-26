@@ -10,7 +10,6 @@ from styling.colours import COLOURS
 Buttons.home_button()
 st.title("Magasin analysis")
 
-
 # Retrieve reservoir data from NVE API
 from utils.APIs.NVE_API import get_nve_data
 
